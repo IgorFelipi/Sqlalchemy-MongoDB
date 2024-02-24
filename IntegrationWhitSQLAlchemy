@@ -1,0 +1,122 @@
+import sqlalchemy
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import relationship
+from sqlalchemy import Column
+from sqlalchemy import create_engine 
+from sqlalchemy import inspect
+from sqlalchemy import func
+from sqlalchemy import Integer
+from sqlalchemy import select
+from sqlalchemy import String
+from sqlalchemy import ForeignKey
+
+
+Base = declarative_base()
+
+
+class Cliente(Base):
+    __tablename__ = "conta_cliente"
+    id = Column(Integer, primary_key = True)
+    nome = Column(String)
+    cpf = Column(String(9))
+    endereco = Column(String(9))
+    
+    conta = relationship(
+        "Conta", back_populates="cliente"
+    )
+
+    def __repr__(self):
+        return (f"User(id={self.id}, "
+                f"name={self.nome}, "
+                f"cpf={self.cpf}, "
+                f"endereço={self.endereco})")
+
+
+
+class Conta(Base):
+    __tablename__ = "conta_banco"
+    id = Column(Integer, primary_key = True)
+    tipo = Column(String)
+    agencia = Column(String)
+    num = Column(String)
+    id_cliente = Column(Integer, ForeignKey("conta_cliente.id"), nullable=False)
+    saldo = Column(Integer)
+
+    cliente = relationship(
+        "Cliente", back_populates="conta"
+    )
+
+    def __repr__(self):
+        return (f"Address(id={self.id}," 
+                f"tipo={self.tipo}),"
+                f"agencia={self.agencia},"
+                f"num= {self.num},"
+                f"saldo= {self.saldo})")
+
+
+
+# conexão com o banco de dados
+engine = create_engine("sqlite://")
+
+# criando as bases como tabela no banco de dados
+Base.metadata.create_all(engine)
+
+inspetor_engine = inspect(engine)
+
+with Session(engine) as session:
+    Igor = Cliente(
+        nome="Igor Filipe",
+        cpf="098-234-567.16",
+        endereco="igorrode@hotmail.com",
+        conta=[Conta(agencia="agencia: 2453")]
+    )
+
+    Rodrigo = Cliente(
+        nome="Rodrigo Cavalheiro",
+        cpf="345-675-123.49",
+        endereco="rodrigoteixa@hotmail.com",
+        conta=[Conta(agencia="agencia: 3456")]
+    )
+
+    Carol = Cliente(
+        nome="Carol Santos",
+        cpf="546-897-012.80",
+        endereco="carolsilva@hotmail.com",
+        conta=[Conta(agencia="agencia: 0543")]
+    )
+    
+    # Enviando para o banco de dados(persistencia de dados)
+    session.add_all([Igor, Rodrigo, Carol])
+    session.commit()
+
+print("\nRecuperando Usuários a partir de uma condição de filtragem")
+stmt = select(Cliente).where(Cliente.nome.in_(["Igor Filipe", "Carol Santos"]))
+for user in session.scalars(stmt):
+    print(user)
+
+print("\nRecuperando a agencia de Rodrigo")
+stmt_conta = select(Conta.agencia).where(Conta.id_cliente.in_([2]))
+for conta_agencia in session.scalars(stmt_conta):
+    print(conta_agencia)
+
+stmt_order = select(Cliente).order_by(Cliente.nome.desc())
+print("\nRecuperando info de maneira ordenada")
+for result in session.scalars(stmt_order):
+    print(result)
+
+print("\nJuntando tabelas com o metodo join")
+stmt_join = select(Cliente.nome, Conta.agencia).join_from(Conta, Cliente)
+for result in session.scalars(stmt_join):
+    print(result)
+
+connection = engine.connect()
+results = connection.execute(stmt_join).fetchall()
+print("\n Executando statement a partir de uma connection")
+for result in results:
+    print(result)
+
+stmt_count = select(func.count("*")).select_from(Cliente)
+print("\nTotal de instancias em Cliente")
+for result in session.scalars(stmt_count):
+    print(result)
