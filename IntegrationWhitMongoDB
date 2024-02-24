@@ -2,7 +2,7 @@ import pprint
 import pymongo as pyM
 import datetime
 
-client = pyM.MongoClient("mongodb+srv://IgorFili:274398701@cluster0.ozsmeqp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+client = pyM.MongoClient("mongodb+srv://************@cluster0.ozsmeqp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 
 data_base = client.test
 collection = data_base.test_collection
